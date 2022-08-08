@@ -3,10 +3,12 @@ const router = require("express").Router();
 // ℹ️ Handles password encryption
 const bcrypt = require("bcrypt");
 const mongoose = require("mongoose");
-
+//Json Web Token
+const jwt = require("jsonwebtoken");
 // How many rounds should bcrypt run the salt (default [10 - 12 rounds])
 const saltRounds = 10;
-
+//Middlewares
+const { createJWT, clearRes} = require('../middleware/jsontoken-mid')
 // Require the User model in order to interact with the database
 const User = require("../models/User.model");
 
@@ -27,14 +29,14 @@ router.post("/signup", isLoggedOut, (req, res) => {
       .json({ errorMessage: "Please provide your username." });
   }
 
-  if (password.length < 8) {
+ /*  if (password.length < 8) {
     return res.status(400).json({
       errorMessage: "Your password needs to be at least 8 characters long.",
     });
-  }
+  } */
 
   //   ! This use case is using a regular expression to control for special characters and min length
-  /*
+  
   const regex = /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}/;
 
   if (!regex.test(password)) {
@@ -43,7 +45,7 @@ router.post("/signup", isLoggedOut, (req, res) => {
         "Password needs to have at least 8 chars and must contain at least one number, one lowercase and one uppercase letter.",
     });
   }
-  */
+ 
 
   // Search the database for a user with the username submitted in the form
   User.findOne({ username }).then((found) => {
@@ -65,8 +67,23 @@ router.post("/signup", isLoggedOut, (req, res) => {
       })
       .then((user) => {
         // Bind the user to the session object
-        req.session.user = user;
-        res.status(201).json(user);
+        // req.session.user = user;
+        //comienza el JWT Jopurney templo de Agua
+        const [header, payload, signature] = createJWT(user)
+        res.cookie("headload",`${header}.${payload}`, {
+          maxAge: 1000 * 60 * 30,
+          httpOnly: true,
+          sameSite: true,
+          secure: false,
+        })
+        res.cookie("signature", signature, {
+            httpOnly: true,
+            sameSite: true,
+            secure: false,
+        })
+        console.log("response con cookie + token", res.cookie)
+        const newUser = clearRes(user.toObject())
+        res.status(201).json({user: newUser});
       })
       .catch((error) => {
         if (error instanceof mongoose.Error.ValidationError) {

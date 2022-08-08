@@ -3,7 +3,7 @@ const authRoutes = require("./auth.routes");
 const contactsRoutes = require("./contacts.routes");
 
 /* GET home page */
-router.get("/get-all-contacts", (req, res, next) => {
+router.get("/", (req, res, next) => {
   res.json({name:"Kain", phone: "123456789"});
 });
 
